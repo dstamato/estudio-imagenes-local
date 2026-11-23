@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Estudio · imágenes locales</title>
+<style>
+:root{--bg:#0f1012;--panel:#17191c;--line:#262a2f;--txt:#e9ebee;--dim:#8b9098;--acc:#7CFF00;--err:#ff6b6b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 -apple-system,system-ui,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:16px 24px;border-bottom:1px solid var(--line)}
+header h1{font-size:17px;margin:0;font-weight:650}header h1 b{color:var(--acc)}
+header span{color:var(--dim);font-size:13px}header button{margin-left:auto}
+main{display:grid;grid-template-columns:400px 1fr;gap:0;min-height:calc(100vh - 58px)}
+aside{padding:20px 24px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:18px}
+label.t{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);display:block;margin-bottom:8px}
+textarea{width:100%;min-height:150px;resize:vertical;background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:12px;font:inherit}
+textarea:focus,input:focus{outline:2px solid var(--acc);outline-offset:-1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+.chip.on{border-color:var(--acc);color:var(--acc)}
+.row{display:flex;gap:10px;align-items:center}
+input[type=text]{background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 10px;width:140px;font:inherit}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--txt);padding:8px 14px}
+#go{background:var(--acc);color:#0b0c0d;border:0;font-weight:700;padding:14px;font-size:16px}
+#go:disabled{opacity:.45;cursor:default}
+.hint{font-size:12.5px;color:var(--dim)}
+.bar{height:6px;background:var(--line);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .4s}
+#stat{font-size:13px;color:var(--dim);min-height:18px}#stat.err{color:var(--err)}
+section{padding:20px 24px;display:flex;flex-direction:column;gap:20px;overflow:auto}
+#stage{background:var(--panel);border:1px solid var(--line);border-radius:14px;min-height:420px;display:flex;align-items:center;justify-content:center;position:relative}
+#stage img{max-width:100%;max-height:70vh;border-radius:8px;display:block}
+#stage .empty{color:var(--dim)}
+#meta{font-size:13px;color:var(--dim)}#meta button{font-size:12.5px;padding:5px 10px;margin-right:6px}
+#gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+#gal img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--line)}
+#gal img:hover{border-color:var(--acc)}
+.th{position:relative}.th .x{position:absolute;top:6px;right:6px;padding:2px 8px;font-size:12px;border-radius:999px;background:rgba(15,16,18,.85);opacity:0;transition:opacity .15s}
+.th:hover .x,.th .x.sure{opacity:1}.x.sure,.del.sure{background:var(--err);color:#fff;border-color:var(--err)}
+#gal .th .x.sure{font-size:11px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin:0;font-weight:600}
+[hidden]{display:none!important}
+select{background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 8px;font:inherit;font-size:13px}
+.mode{font-size:13px;color:var(--dim);display:flex;gap:6px;align-items:center;cursor:pointer}
+#enh{border-color:var(--acc);color:var(--acc)}#enh:disabled{opacity:.5;cursor:default}
+#enbox{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+#enbox textarea{min-height:190px;border-color:var(--acc)}
+#enbox.stale textarea{border-color:#ffb020;opacity:.7}
+#enst{text-transform:none;letter-spacing:0}
+</style></head><body>
+<header><h1>Estudio<b>.</b></h1><span>Z-Image Turbo · en tu Mac, sin internet</span><button onclick="fetch('/api/open-folder')">Abrir carpeta</button></header>
+<main>
+<aside>
+  <div>
+    <label class="t" for="p">Qué querés ver</label>
+    <textarea id="p" placeholder="Ej.: A black cat sleeping on an old velvet sofa, cold blue moonlight through a window, dark and moody, 35mm film"></textarea>
+    <div class="hint">Funciona mejor en inglés y con detalles: sujeto, luz, cámara, estilo.</div>
+    <div class="row" style="margin-top:12px;flex-wrap:wrap">
+      <button id="enh" onclick="enhance()">✨ Traducir y mejorar</button>
+      <label class="mode"><input type="checkbox" id="onlytr"> solo traducir</label>
+      <select id="llm" hidden title="Modelo local de Ollama"></select>
+    </div>
+    <div class="hint" id="llmhint" style="margin-top:6px"></div>
+    <div id="enbox" hidden>
+      <label class="t" for="pe">Prompt en inglés <span id="enst"></span></label>
+      <textarea id="pe"></textarea>
+      <div class="row"><button onclick="discardEn()">Descartar</button><span class="hint">Podés editarlo antes de generar.</span></div>
+    </div>
+  </div>
+  <div><label class="t">Formato</label><div class="chips" id="fmt"></div></div>
+  <div><label class="t">Estilo (se suma al texto)</label><div class="chips" id="sty"></div></div>
+  <div><label class="t">Calidad</label><div class="chips" id="q"></div></div>
+  <div><label class="t">Semilla</label>
+    <div class="row"><input type="text" id="seed" placeholder="al azar"><button onclick="seed.value=''">Al azar</button></div>
+    <div class="hint">Misma semilla + mismo texto = misma imagen. Útil para retocar solo el texto.</div>
+  </div>
+  <button id="go" onclick="gen()">Generar</button>
+  <div><div class="bar"><i id="bi"></i></div><div id="stat"></div></div>
+</aside>
+<section>
+  <div id="stage"><div class="empty">Tu imagen aparece acá.</div></div>
+  <div id="meta"></div>
+  <h2>Galería</h2>
+  <div id="gal"></div>
+</section>
+</main>
+<script>
+const FMT=[["Cuadrado",1024,1024],["Story 9:16",768,1344],["Horizontal",1216,832],["Retrato 3:4",864,1152],["Cine 21:9",1344,576]];
+const STY=[["Ninguno",""],["Foto realista",", photorealistic, natural light, shot on 35mm, sharp detail"],["Cine",", cinematic still, dramatic lighting, anamorphic lens, film grain, color graded"],["Oscuro",", dark moody atmosphere, deep shadows, chiaroscuro, high contrast"],["Ilustración",", detailed digital illustration, clean lines, vibrant colors"],["Años 80",", 1980s retro aesthetic, airbrushed, neon, VHS grain"],["Acuarela",", watercolor painting, soft washes, paper texture"],["Boceto lápiz",", pencil sketch, graphite on paper, hand drawn"]];
+const Q=[["Rápida (6 pasos)",6],["Normal (9 pasos)",9],["Cuidada (12 pasos)",12]];
+let f=FMT[0],s=STY[0],q=Q[1];
+function chips(el,arr,get,set){const c=document.getElementById(el);arr.forEach(a=>{const b=document.createElement('button');b.className='chip'+(a===get()?' on':'');b.textContent=a[0];b.onclick=()=>{set(a);[...c.children].forEach(x=>x.classList.remove('on'));b.classList.add('on')};c.appendChild(b)})}
+chips('fmt',FMT,()=>f,a=>f=a);chips('sty',STY,()=>s,a=>s=a);chips('q',Q,()=>q,a=>q=a);
+const $=id=>document.getElementById(id);
+async function gen(){
+  const en=!$('enbox').hidden;
+  if(en&&stale){$('stat').className='err';$('stat').textContent='Cambiaste el español: tocá ✨ de nuevo o descartá el prompt en inglés.';return}
+  const prompt=(en?$('pe').value:$('p').value).trim();if(!prompt){(en?$('pe'):$('p')).focus();return}
+  $('go').disabled=true;$('stat').className='';$('stat').textContent='Arrancando…';
+  const r=await fetch('/api/generate',{method:'POST',body:JSON.stringify({prompt:prompt+s[1],width:f[1],height:f[2],steps:q[1],seed:$('seed').value})});
+  const j=await r.json();if(!r.ok){$('stat').className='err';$('stat').textContent=j.error;$('go').disabled=false;return}
+  poll();
+}
+async function poll(){
+  const st=await (await fetch('/api/status')).json();
+  const pct=st.phase==='generando'?Math.round(100*st.step/st.steps):(st.busy?3:0);
+  $('bi').style.width=pct+'%';
+  if(st.busy){$('stat').textContent=(st.phase==='generando'?`Paso ${st.step} de ${st.steps}`:'Cargando el modelo…')+` · ${st.elapsed} s`;setTimeout(poll,1000);return}
+  $('go').disabled=false;
+  if(st.phase==='error'){$('stat').className='err';$('stat').textContent='Falló: '+(st.error||'').slice(-200);return}
+  $('bi').style.width='100%';$('stat').textContent=`Lista en ${st.last.seconds} s`;show(st.last);loadGal();
+}
+function show(m){
+  $('stage').innerHTML=`<img src="/img/${m.file}">`;
+  $('meta').innerHTML=`<button onclick='reuse(${JSON.stringify(JSON.stringify(m))})'>Reusar texto y semilla</button><button onclick="fetch('/api/reveal?f=${m.file}')">Mostrar en Finder</button><button class="del" onclick="del(this,'${m.file}')">Borrar</button> ${m.width}×${m.height} · semilla ${m.seed} · ${m.steps} pasos`;
+  current=m.file;
+}
+let current=null;
+async function del(btn,file){
+  if(!btn.dataset.sure){btn.dataset.sure=1;btn.textContent=btn.classList.contains('x')?'¿Borrar?':'¿Seguro? Tocá de nuevo';btn.classList.add('sure');setTimeout(()=>{if(btn.isConnected){delete btn.dataset.sure;btn.textContent=btn.dataset.label||'Borrar';btn.classList.remove('sure')}},3000);return}
+  const r=await fetch('/api/delete',{method:'POST',body:JSON.stringify({file})});const j=await r.json();
+  if(!r.ok){$('stat').className='err';$('stat').textContent=j.error;return}
+  if(current===file){$('stage').innerHTML='<div class="empty">Imagen movida a la Papelera.</div>';$('meta').innerHTML='';current=null}
+  loadGal();
+}
+function reuse(js){discardEn();const m=JSON.parse(js);$('p').value=m.prompt;$('seed').value=m.seed;s=STY[0];[...$('sty').children].forEach((x,i)=>x.classList.toggle('on',i===0))}
+async function loadGal(){const g=await (await fetch('/api/gallery')).json();$('gal').innerHTML='';
+  if(!g.length){$('gal').innerHTML='<div class="hint">Todavía no hay imágenes.</div>';return}
+  g.forEach(m=>{const w=document.createElement('div');w.className='th';
+    const i=document.createElement('img');i.src='/img/'+m.file;i.title=m.prompt;i.loading='lazy';i.onclick=()=>show(m);
+    const x=document.createElement('button');x.className='x';x.title='Borrar';x.textContent='✕';x.dataset.label='✕';x.onclick=e=>{e.stopPropagation();del(x,m.file)};
+    w.append(i,x);$('gal').appendChild(w)})}
+loadGal();fetch('/api/status').then(r=>r.json()).then(st=>{if(st.busy){$('go').disabled=true;poll()}});
+$('p').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))gen()});
+let stale=false;
+function setStale(v){stale=v;$('enbox').classList.toggle('stale',v);$('enst').textContent=v?'· el español cambió: tocá ✨ de nuevo o descartá':'· se usa este texto al generar'}
+function discardEn(){$('enbox').hidden=true;$('pe').value='';setStale(false)}
+$('p').addEventListener('input',()=>{if(!$('enbox').hidden)setStale(true)});
+async function enhance(){
+  const text=$('p').value.trim();if(!text){$('p').focus();return}
+  const b=$('enh');b.disabled=true;b.textContent='Pensando…';$('stat').className='';$('stat').textContent='El modelo local está escribiendo (la primera vez tarda unos segundos)…';
+  try{
+    const r=await fetch('/api/enhance',{method:'POST',body:JSON.stringify({text,mode:$('onlytr').checked?'translate':'enhance',model:$('llm').value})});
+    const j=await r.json();if(!r.ok)throw new Error(j.error);
+    $('pe').value=j.prompt;$('enbox').hidden=false;setStale(false);
+    $('stat').textContent=`Listo con ${j.model} en ${j.seconds} s. Revisalo y tocá Generar.`;
+  }catch(e){$('stat').className='err';$('stat').textContent=e.message}
+  b.disabled=false;b.textContent='✨ Traducir y mejorar';
+}
+fetch('/api/llm').then(r=>r.json()).then(j=>{
+  if(!j.models.length){$('llmhint').textContent=j.up?'Ollama no tiene modelos. En Terminal: ollama pull qwen3:8b':'Ollama está apagado: se prende solo al tocar ✨.';if(j.up)$('enh').disabled=true;return}
+  j.models.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;if(m===j.model)o.selected=true;$('llm').appendChild(o)});
+  $('llm').hidden=false;$('llmhint').textContent='Escribí en español: el modelo local lo pasa a inglés con más detalle, sin internet.';
+}).catch(()=>{});
+</script></body></html>
